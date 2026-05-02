@@ -7,6 +7,8 @@ import os
 
 RAW_OLIST_DIR = "data/raw/olist"
 BRONZE_BASE_DIR = "data/bronze"
+SILVER_BASE_DIR = "data/silver"
+GOLD_BASE_DIR = "data/gold"
 LAKEHOUSE_BRONZE_ROOT = os.environ.get("LAKEHOUSE_BRONZE_ROOT", "s3a://lakehouse/bronze")
 
 
@@ -20,3 +22,11 @@ def bronze_local_path(table_name: str) -> str:
 
 def bronze_hudi_path(table_name: str) -> str:
     return f"{LAKEHOUSE_BRONZE_ROOT}/{table_name}"
+
+
+def silver_local_path(table_name: str) -> str:
+    return f"{SILVER_BASE_DIR}/{table_name}"
+
+
+def gold_local_path(table_name: str) -> str:
+    return f"{GOLD_BASE_DIR}/{table_name}"
