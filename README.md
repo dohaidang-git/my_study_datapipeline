@@ -6,6 +6,7 @@ Detailed structure documentation: [docs/architecture/project-structure.md](/home
 System design documentation: [docs/architecture/system-design.md](/home/dohaidang/bigdata_hudi/docs/architecture/system-design.md:1)
 Data mapping documentation: [docs/architecture/data-mapping.md](/home/dohaidang/bigdata_hudi/docs/architecture/data-mapping.md:1)
 Docker stack documentation: [docs/runbooks/docker-stack.md](/home/dohaidang/bigdata_hudi/docs/runbooks/docker-stack.md:1)
+Project checklist: [docs/runbooks/project-checklist.md](/home/dohaidang/bigdata_hudi/docs/runbooks/project-checklist.md:1)
 
 ## Directory layout
 
@@ -30,6 +31,6 @@ Docker stack documentation: [docs/runbooks/docker-stack.md](/home/dohaidang/bigd
 
 ## Immediate next steps
 
-1. Add `docker-compose.yml` and base service configs.
-2. Land the initial Olist or UCI e-commerce dataset under `data/raw/`.
-3. Implement the first Spark bronze load job for `orders` and `order_items`.
+1. Switch bronze, silver, and gold jobs from local `parquet` writes to `Hudi`.
+2. Add Airflow DAGs for end-to-end orchestration.
+3. Add validation queries and dashboard wiring on top of `hive.analytics.*` in Trino.
