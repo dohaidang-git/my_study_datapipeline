@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment files
+.env
+
+# Logs and temporary output
+logs/*
+!logs/.gitkeep
+!logs/airflow/
+logs/airflow/*
+!logs/airflow/.gitkeep
+*.log
+
+# Downloaded jars and local binaries
+jars/*
+!jars/.gitkeep
+
+# Data lake layers and raw datasets
+data/raw/*
+!data/raw/olist/
+!data/raw/products_api/
+data/raw/olist/*
+!data/raw/olist/.gitkeep
+data/raw/products_api/*
+!data/raw/products_api/.gitkeep
+
+data/bronze/*
+!data/bronze/.gitkeep
+data/silver/*
+!data/silver/.gitkeep
+data/gold/*
+!data/gold/.gitkeep
+
+# Spark local artifacts
+metastore_db/
+spark-warehouse/
+derby.log
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
