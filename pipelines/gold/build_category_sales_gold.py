@@ -14,13 +14,13 @@ from pyspark.sql import functions as F
 from pipelines.common.gold_job import (
     build_spark_session,
     parse_gold_job_args,
-    read_parquet_source,
+    read_table_source,
     write_gold_output,
 )
-from pipelines.common.paths import gold_local_path, silver_local_path
+from pipelines.common.paths import gold_hudi_path, silver_hudi_path
 
 TABLE_NAME = "category_sales_gold"
-OUTPUT_PATH = gold_local_path(TABLE_NAME)
+OUTPUT_PATH = gold_hudi_path(TABLE_NAME)
 
 
 def transform(order_items_df: DataFrame, products_df: DataFrame, orders_df: DataFrame) -> DataFrame:
@@ -57,9 +57,9 @@ def transform(order_items_df: DataFrame, products_df: DataFrame, orders_df: Data
 def main() -> None:
     args = parse_gold_job_args(default_output_path=OUTPUT_PATH)
     spark = build_spark_session("build_category_sales_gold")
-    order_items_df = read_parquet_source(spark, silver_local_path("order_items_silver"))
-    products_df = read_parquet_source(spark, silver_local_path("products_silver"))
-    orders_df = read_parquet_source(spark, silver_local_path("orders_silver"))
+    order_items_df = read_table_source(spark, silver_hudi_path("order_items_silver"), args.input_format)
+    products_df = read_table_source(spark, silver_hudi_path("products_silver"), args.input_format)
+    orders_df = read_table_source(spark, silver_hudi_path("orders_silver"), args.input_format)
     gold_df = transform(order_items_df, products_df, orders_df)
     write_gold_output(
         gold_df,

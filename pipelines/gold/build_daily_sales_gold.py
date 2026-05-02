@@ -14,13 +14,13 @@ from pyspark.sql import functions as F
 from pipelines.common.gold_job import (
     build_spark_session,
     parse_gold_job_args,
-    read_parquet_source,
+    read_table_source,
     write_gold_output,
 )
-from pipelines.common.paths import gold_local_path, silver_local_path
+from pipelines.common.paths import gold_hudi_path, silver_hudi_path
 
 TABLE_NAME = "daily_sales_gold"
-OUTPUT_PATH = gold_local_path(TABLE_NAME)
+OUTPUT_PATH = gold_hudi_path(TABLE_NAME)
 
 
 def build_order_items_agg(order_items_df: DataFrame) -> DataFrame:
@@ -68,9 +68,9 @@ def transform(orders_df: DataFrame, order_items_df: DataFrame, payments_df: Data
 def main() -> None:
     args = parse_gold_job_args(default_output_path=OUTPUT_PATH)
     spark = build_spark_session("build_daily_sales_gold")
-    orders_df = read_parquet_source(spark, silver_local_path("orders_silver"))
-    order_items_df = read_parquet_source(spark, silver_local_path("order_items_silver"))
-    payments_df = read_parquet_source(spark, silver_local_path("payments_silver"))
+    orders_df = read_table_source(spark, silver_hudi_path("orders_silver"), args.input_format)
+    order_items_df = read_table_source(spark, silver_hudi_path("order_items_silver"), args.input_format)
+    payments_df = read_table_source(spark, silver_hudi_path("payments_silver"), args.input_format)
     gold_df = transform(orders_df, order_items_df, payments_df)
     write_gold_output(
         gold_df,
