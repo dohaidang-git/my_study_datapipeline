@@ -13,20 +13,22 @@ import argparse
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from pipelines.common.silver_job import build_spark_session, read_parquet_source, write_silver_output
+from pipelines.common.paths import silver_hudi_path
+from pipelines.common.silver_job import build_spark_session, read_table_source, write_silver_output
 
 TABLE_NAME = "products_silver"
-BASE_INPUT_PATH = "data/silver/products_silver_base"
-TRANSLATION_INPUT_PATH = "data/silver/product_category_translation_silver"
-OUTPUT_PATH = "data/silver/products_silver"
+BASE_INPUT_PATH = silver_hudi_path("products_silver_base")
+TRANSLATION_INPUT_PATH = silver_hudi_path("product_category_translation_silver")
+OUTPUT_PATH = silver_hudi_path(TABLE_NAME)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-input-path", default=BASE_INPUT_PATH)
     parser.add_argument("--translation-input-path", default=TRANSLATION_INPUT_PATH)
+    parser.add_argument("--input-format", default="hudi", choices=("parquet", "hudi"))
     parser.add_argument("--output-path", default=OUTPUT_PATH)
-    parser.add_argument("--output-format", default="parquet", choices=("parquet", "hudi"))
+    parser.add_argument("--output-format", default="hudi", choices=("parquet", "hudi"))
     parser.add_argument("--mode", default="overwrite", choices=("overwrite", "append"))
     return parser.parse_args()
 
@@ -56,8 +58,8 @@ def transform(products_df: DataFrame, translation_df: DataFrame) -> DataFrame:
 def main() -> None:
     args = parse_args()
     spark = build_spark_session("load_products_silver")
-    products_df = read_parquet_source(spark, args.base_input_path)
-    translation_df = read_parquet_source(spark, args.translation_input_path)
+    products_df = read_table_source(spark, args.base_input_path, args.input_format)
+    translation_df = read_table_source(spark, args.translation_input_path, args.input_format)
     silver_df = transform(products_df, translation_df)
     write_silver_output(
         silver_df,

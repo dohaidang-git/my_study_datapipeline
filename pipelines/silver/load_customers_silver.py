@@ -11,17 +11,17 @@ if __package__ is None or __package__ == "":
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from pipelines.common.paths import bronze_local_path
+from pipelines.common.paths import bronze_hudi_path, silver_hudi_path
 from pipelines.common.silver_job import (
     build_spark_session,
     parse_silver_job_args,
-    read_parquet_source,
+    read_table_source,
     write_silver_output,
 )
 
 TABLE_NAME = "customers_silver"
 INPUT_TABLE = "customers_bronze"
-OUTPUT_PATH = "data/silver/customers_silver"
+OUTPUT_PATH = silver_hudi_path(TABLE_NAME)
 
 
 def transform(df: DataFrame) -> DataFrame:
@@ -35,11 +35,11 @@ def transform(df: DataFrame) -> DataFrame:
 
 def main() -> None:
     args = parse_silver_job_args(
-        default_input_path=bronze_local_path(INPUT_TABLE),
+        default_input_path=bronze_hudi_path(INPUT_TABLE),
         default_output_path=OUTPUT_PATH,
     )
     spark = build_spark_session("load_customers_silver")
-    df = read_parquet_source(spark, args.input_path)
+    df = read_table_source(spark, args.input_path, args.input_format)
     silver_df = transform(df)
     write_silver_output(
         silver_df,
