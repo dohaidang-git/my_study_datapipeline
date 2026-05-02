@@ -5,6 +5,8 @@ Scaffold for a local e-commerce data pipeline built around Apache Hudi.
 Detailed structure documentation: [docs/architecture/project-structure.md](/home/dohaidang/bigdata_hudi/docs/architecture/project-structure.md:1)
 System design documentation: [docs/architecture/system-design.md](/home/dohaidang/bigdata_hudi/docs/architecture/system-design.md:1)
 Data mapping documentation: [docs/architecture/data-mapping.md](/home/dohaidang/bigdata_hudi/docs/architecture/data-mapping.md:1)
+Hudi in project documentation: [docs/architecture/hudi-trong-du-an.md](/home/dohaidang/bigdata_hudi/docs/architecture/hudi-trong-du-an.md:1)
+Python files documentation: [docs/architecture/python-files-trong-project.md](/home/dohaidang/bigdata_hudi/docs/architecture/python-files-trong-project.md:1)
 Docker stack documentation: [docs/runbooks/docker-stack.md](/home/dohaidang/bigdata_hudi/docs/runbooks/docker-stack.md:1)
 Project checklist: [docs/runbooks/project-checklist.md](/home/dohaidang/bigdata_hudi/docs/runbooks/project-checklist.md:1)
 
@@ -31,6 +33,6 @@ Project checklist: [docs/runbooks/project-checklist.md](/home/dohaidang/bigdata_
 
 ## Immediate next steps
 
-1. Switch bronze, silver, and gold jobs from local `parquet` writes to `Hudi`.
-2. Add Airflow DAGs for end-to-end orchestration.
-3. Add validation queries and dashboard wiring on top of `hive.analytics.*` in Trino.
+1. Add Airflow DAGs for end-to-end orchestration on top of the current Hudi pipeline.
+2. Expand validation and automated tests for `bronze`, `silver`, `gold`, and Trino query paths.
+3. Add dashboard or BI demo queries on top of `hive.analytics.*`.
