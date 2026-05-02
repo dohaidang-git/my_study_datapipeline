@@ -14,6 +14,7 @@ from pipelines.common.spark_session import build_spark_session
 @dataclass(frozen=True)
 class SilverJobArgs:
     input_path: str
+    input_format: str
     output_path: str
     output_format: str
     mode: str
@@ -22,12 +23,14 @@ class SilverJobArgs:
 def parse_silver_job_args(*, default_input_path: str, default_output_path: str) -> SilverJobArgs:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-path", default=default_input_path)
+    parser.add_argument("--input-format", default="hudi", choices=("parquet", "hudi"))
     parser.add_argument("--output-path", default=default_output_path)
-    parser.add_argument("--output-format", default="parquet", choices=("parquet", "hudi"))
+    parser.add_argument("--output-format", default="hudi", choices=("parquet", "hudi"))
     parser.add_argument("--mode", default="overwrite", choices=("overwrite", "append"))
     args = parser.parse_args()
     return SilverJobArgs(
         input_path=args.input_path,
+        input_format=args.input_format,
         output_path=args.output_path,
         output_format=args.output_format,
         mode=args.mode,
@@ -36,6 +39,16 @@ def parse_silver_job_args(*, default_input_path: str, default_output_path: str) 
 
 def read_parquet_source(spark, input_path: str) -> DataFrame:
     return spark.read.parquet(input_path)
+
+
+def read_hudi_source(spark, input_path: str) -> DataFrame:
+    return spark.read.format("hudi").load(input_path)
+
+
+def read_table_source(spark, input_path: str, input_format: str) -> DataFrame:
+    if input_format == "hudi":
+        return read_hudi_source(spark, input_path)
+    return read_parquet_source(spark, input_path)
 
 
 def write_silver_output(
@@ -60,6 +73,7 @@ def write_silver_output(
         df,
         table_name=table_name,
         output_path=output_path,
+        mode=mode,
         record_key=record_key,
         precombine_field=precombine_field,
         partition_field=partition_field,
@@ -70,6 +84,8 @@ __all__ = [
     "SilverJobArgs",
     "build_spark_session",
     "parse_silver_job_args",
+    "read_hudi_source",
     "read_parquet_source",
+    "read_table_source",
     "write_silver_output",
 ]

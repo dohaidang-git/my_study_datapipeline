@@ -39,6 +39,7 @@ def write_hudi_table(
     *,
     table_name: str,
     output_path: str,
+    mode: str,
     record_key: str,
     precombine_field: str,
     partition_field: str | None = None,
@@ -49,4 +50,4 @@ def write_hudi_table(
         precombine_field=precombine_field,
         partition_field=partition_field,
     )
-    df.write.format("hudi").options(**options).mode("overwrite").save(output_path)
+    df.write.format("hudi").options(**options).mode(mode).save(output_path)
