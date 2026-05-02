@@ -37,6 +37,7 @@ Important ports:
 
 Role:
 - initializes the MinIO bucket after MinIO becomes healthy
+- can also be reused as a short-lived utility container to copy local parquet outputs into MinIO
 
 Why it exists:
 - avoids manual bucket creation every time the stack starts
@@ -64,6 +65,7 @@ Why it exists:
 
 Build note:
 - this service is built from a local Dockerfile so the PostgreSQL JDBC driver can be added to the Hive image
+- the image also exposes Hadoop S3A support on the default classpath so Hive Metastore can validate `s3://` and `s3a://` locations backed by MinIO
 
 Important port:
 - `9083`: thrift metastore endpoint
@@ -76,6 +78,10 @@ Role:
 Why it exists:
 - lets you validate bronze, silver, and gold tables with SQL
 - can later back Superset or ad hoc analytics
+
+Query note:
+- Trino queries the gold parquet outputs after they are copied into MinIO under `s3://lakehouse/gold/...`
+- the host `data/` directory is still mounted for debugging, but the stable SQL path is now `MinIO -> Hive Metastore -> Trino`
 
 Important port:
 - `8081` on host maps to Trino `8080` in the container
@@ -215,11 +221,26 @@ Why it exists:
 
 Role:
 - extends the Hive image with the PostgreSQL JDBC driver required by the metastore schema tool
+- promotes the Hadoop AWS jars into the default Hadoop and Hive classpaths
 
 Why it exists:
 - the base Hive image does not include `org.postgresql.Driver`
 - without this jar, Hive cannot initialize or connect to the external Postgres metastore
-- the JDBC jar permissions are also normalized so the Hive process can read it at runtime
+- the S3A jars exist in the base image, but they are only shipped under Hadoop optional tools
+- moving them into the default classpath allows Hive Metastore to resolve and validate MinIO-backed table locations
+
+### [configs/hadoop/core-site.xml](/home/dohaidang/bigdata_hudi/configs/hadoop/core-site.xml:1)
+
+Role:
+- configures Hadoop filesystem access for Hive Metastore
+
+What it sets:
+- `fs.s3a.*` credentials and MinIO endpoint
+- `fs.s3.impl` alias so `s3://lakehouse/...` locations are handled by the S3A client
+
+Why it matters:
+- Trino uses `s3://...` in Hive table metadata
+- Hive Metastore still needs Hadoop filesystem support to validate those paths during table creation and partition sync
 
 ### [docker/trino/catalog/hive.properties](/home/dohaidang/bigdata_hudi/docker/trino/catalog/hive.properties:1)
 
@@ -233,6 +254,7 @@ What it connects:
 Why it matters:
 - without this file, Trino would start but not know where the lakehouse tables are
 - on Trino 476, MinIO and S3-compatible access must use `fs.native-s3.enabled=true` with `s3.*` properties instead of the deprecated `hive.s3.*` keys
+- external gold tables can point at `s3://lakehouse/gold/...` once the parquet outputs are uploaded to MinIO
 
 ### [configs/spark/spark-defaults.conf](/home/dohaidang/bigdata_hudi/configs/spark/spark-defaults.conf:1)
 
