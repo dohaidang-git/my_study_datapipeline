@@ -57,6 +57,8 @@ services:
       mc mb --ignore-existing local/lakehouse &&
       mc anonymous set none local/lakehouse
       "
+    volumes:
+      - ./data:/lake:ro
     networks:
       - lakehouse
 
@@ -98,6 +100,7 @@ services:
     ports:
       - "9083:9083"
     volumes:
+      - ./configs/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
       - warehouse_data:/opt/hive/data/warehouse
     networks:
       - lakehouse
@@ -120,6 +123,8 @@ services:
       - ./docker/trino/jvm.config:/etc/trino/jvm.config:ro
       - ./docker/trino/node.properties:/etc/trino/node.properties:ro
       - ./docker/trino/catalog:/etc/trino/catalog:ro
+      - ./data:/lake:ro
+      - warehouse_data:/opt/hive/data/warehouse
     networks:
       - lakehouse
 
