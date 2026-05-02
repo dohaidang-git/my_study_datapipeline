@@ -36,6 +36,14 @@ def transform(df: DataFrame) -> DataFrame:
                 F.col("geolocation_lng"),
             ),
         )
+        .withColumn(
+            "bronze_record_key",
+            F.concat_ws(
+                "_",
+                F.coalesce(F.col("geolocation_key"), F.lit("null")),
+                F.monotonically_increasing_id().cast("string"),
+            ),
+        )
     )
 
 
@@ -58,7 +66,7 @@ def main() -> None:
         output_path=args.output_path,
         output_format=args.output_format,
         mode=args.mode,
-        record_key="geolocation_key",
+        record_key="bronze_record_key",
         precombine_field="_ingested_at",
     )
     spark.stop()

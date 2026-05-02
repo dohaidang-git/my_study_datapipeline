@@ -28,6 +28,15 @@ def transform(df: DataFrame) -> DataFrame:
         df.withColumn("review_score", F.col("review_score").cast("int"))
         .withColumn("review_creation_date", F.to_timestamp(F.col("review_creation_date")))
         .withColumn("review_answer_timestamp", F.to_timestamp(F.col("review_answer_timestamp")))
+        .withColumn(
+            "bronze_record_key",
+            F.concat_ws(
+                "_",
+                F.coalesce(F.col("review_id"), F.lit("null")),
+                F.coalesce(F.col("order_id"), F.lit("null")),
+                F.monotonically_increasing_id().cast("string"),
+            ),
+        )
     )
 
 
@@ -50,7 +59,7 @@ def main() -> None:
         output_path=args.output_path,
         output_format=args.output_format,
         mode=args.mode,
-        record_key="review_id",
+        record_key="bronze_record_key",
         precombine_field="review_answer_timestamp",
     )
     spark.stop()

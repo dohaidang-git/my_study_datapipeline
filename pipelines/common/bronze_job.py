@@ -65,6 +65,7 @@ def write_bronze_output(
         df,
         table_name=table_name,
         output_path=output_path,
+        mode=mode,
         record_key=record_key,
         precombine_field=precombine_field,
         partition_field=partition_field,
