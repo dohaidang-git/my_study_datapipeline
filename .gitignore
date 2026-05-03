@@ -65,3 +65,7 @@ derby.log
 build/
 dist/
 *.egg-info/
+
+# BI demo outputs
+reports/bi_demo_outputs/*
+!reports/bi_demo_outputs/.gitkeep
