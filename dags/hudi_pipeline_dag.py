@@ -190,6 +190,11 @@ with DAG(
         f"set -e; bash {SCRIPTS_DIR}/spark_submit_container.sh pipelines/tools/run_data_quality_checks.py",
         timedelta(hours=1),
     )
+    freshness_reconciliation_hudi = shell_task(
+        "freshness_reconciliation_hudi",
+        f"set -e; bash {SCRIPTS_DIR}/spark_submit_container.sh pipelines/tools/run_freshness_reconciliation_checks.py",
+        timedelta(hours=1),
+    )
 
     verify_trino_gold = shell_task(
         "verify_trino_gold",
@@ -216,4 +221,5 @@ with DAG(
     [orders_silver, customers_silver, payments_silver] >> customer_ltv_gold
 
     [daily_sales_gold, category_sales_gold, customer_ltv_gold] >> verify_hudi_pipeline
-    verify_hudi_pipeline >> quality_checks_hudi >> preflight_trino_runtime >> verify_trino_gold >> finish
+    verify_hudi_pipeline >> quality_checks_hudi >> freshness_reconciliation_hudi
+    freshness_reconciliation_hudi >> preflight_trino_runtime >> verify_trino_gold >> finish

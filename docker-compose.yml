@@ -152,6 +152,7 @@ services:
       - ./docker/spark:/opt/spark/scripts:ro
       - ./data:/opt/spark/work-dir/data
       - ./pipelines:/opt/spark/work-dir/pipelines
+      - ./reports:/opt/spark/work-dir/reports
       - ./jars:/opt/spark/work-dir/jars
     networks:
       - lakehouse
@@ -173,6 +174,7 @@ services:
       - ./docker/spark:/opt/spark/scripts:ro
       - ./data:/opt/spark/work-dir/data
       - ./pipelines:/opt/spark/work-dir/pipelines
+      - ./reports:/opt/spark/work-dir/reports
       - ./jars:/opt/spark/work-dir/jars
     networks:
       - lakehouse
@@ -193,6 +195,45 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - lakehouse
+
+  metabase-postgres:
+    image: postgres:16
+    container_name: metabase-postgres
+    environment:
+      POSTGRES_DB: metabaseappdb
+      POSTGRES_USER: metabase
+      POSTGRES_PASSWORD: metabase
+    volumes:
+      - metabase_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabaseappdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lakehouse
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabaseappdb
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: metabase
+      MB_DB_HOST: metabase-postgres
+      JAVA_TIMEZONE: Asia/Ho_Chi_Minh
+      MB_SITE_URL: http://localhost:3000
+    depends_on:
+      metabase-postgres:
+        condition: service_healthy
+      trino:
+        condition: service_started
+    ports:
+      - "3000:3000"
     networks:
       - lakehouse
 
@@ -240,4 +281,5 @@ volumes:
   minio_data:
   metastore_postgres_data:
   airflow_postgres_data:
+  metabase_postgres_data:
   warehouse_data:

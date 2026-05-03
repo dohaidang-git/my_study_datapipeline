@@ -54,7 +54,8 @@ DAG này điều phối toàn bộ flow Hudi hiện tại:
 3. khi silver xong thì chạy `gold`
 4. chạy verify Hudi end-to-end
 5. chạy data quality checks trên Hudi
-6. chạy smoke query trên Trino
+6. chạy freshness và reconciliation checks trên Hudi
+7. chạy smoke query trên Trino
 
 ## 4. Execution model cụ thể
 
