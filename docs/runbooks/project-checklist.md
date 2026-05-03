@@ -54,6 +54,7 @@ Mục tiêu của file này là giúp trả lời nhanh:
 - `[x]` Trino gold query path verified
 - `[x]` Airflow DAG `hudi_full_pipeline` runs successfully
 - `[x]` data quality checks implemented for key silver and gold tables
+- `[x]` freshness and reconciliation checks implemented for key silver and gold tables
 
 ### Remaining scope
 
@@ -124,6 +125,7 @@ Expected silver Hudi tables:
 - `[x]` Airflow executes Spark wrapper scripts through Docker
 - `[x]` Airflow runs Hudi verify step
 - `[x]` Airflow runs data quality checks
+- `[x]` Airflow runs freshness and reconciliation checks
 - `[x]` Airflow runs Trino smoke checks
 
 ## Daily operating checklist
@@ -148,6 +150,7 @@ docker compose logs --tail=80 spark-master trino hive-metastore
 - `[ ]` latest Airflow DAG run is `success`
 - `[ ]` Hudi row-count verify passes
 - `[ ]` data quality checks pass
+- `[ ]` freshness and reconciliation checks pass
 - `[ ]` Trino gold smoke queries pass
 
 Commands:
@@ -156,6 +159,7 @@ Commands:
 docker exec airflow-webserver airflow dags list-runs -d hudi_full_pipeline
 bash scripts/spark_submit_container.sh pipelines/tools/verify_hudi_pipeline.py
 bash scripts/spark_submit_container.sh pipelines/tools/run_data_quality_checks.py
+bash scripts/spark_submit_container.sh pipelines/tools/run_freshness_reconciliation_checks.py
 bash scripts/run_trino_gold_checks.sh
 ```
 
@@ -184,6 +188,12 @@ bash scripts/spark_submit_container.sh pipelines/tools/verify_hudi_pipeline.py
 
 ```bash
 bash scripts/spark_submit_container.sh pipelines/tools/run_data_quality_checks.py
+```
+
+### Run freshness and reconciliation checks manually
+
+```bash
+bash scripts/spark_submit_container.sh pipelines/tools/run_freshness_reconciliation_checks.py
 ```
 
 ### Run Trino gold smoke checks manually
@@ -260,6 +270,7 @@ Current MVP is considered done when all items below hold:
 - `[x]` gold marts can be queried by Trino
 - `[x]` pipeline can be orchestrated by Airflow
 - `[x]` quality checks can be run automatically
+- `[x]` freshness and reconciliation checks can be run automatically
 
 ## Next technical priorities
 

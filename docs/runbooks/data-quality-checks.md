@@ -111,7 +111,8 @@ và trước:
 1. pipeline phải build xong `gold`
 2. verify row count phải pass
 3. quality checks phải pass
-4. sau đó mới sang bước query smoke trên `Trino`
+4. freshness và reconciliation checks phải pass
+5. sau đó mới sang bước query smoke trên `Trino`
 
 ## Khi nào nên mở rộng quality checks
 
