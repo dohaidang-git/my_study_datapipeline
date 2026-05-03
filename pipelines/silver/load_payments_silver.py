@@ -28,6 +28,10 @@ def transform(df: DataFrame) -> DataFrame:
     return (
         df.dropDuplicates(["payment_key"])
         .withColumn("payment_type", F.lower(F.trim(F.col("payment_type"))))
+        .withColumn(
+            "payment_installments",
+            F.when(F.col("payment_installments") <= 0, F.lit(1)).otherwise(F.col("payment_installments")),
+        )
         .filter(F.col("payment_value") >= F.lit(0))
     )
 
