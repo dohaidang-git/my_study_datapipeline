@@ -2,643 +2,280 @@
 
 ## Purpose
 
-This checklist tracks the end-to-end work needed to complete the local Apache Hudi e-commerce pipeline. It is designed to be used as an execution checklist, not just as a high-level roadmap.
+Checklist này phản ánh trạng thái hiện tại của project `bigdata_hudi` sau khi đã chạy được:
 
-Use this file to answer four questions at any point:
+- pipeline `raw -> bronze -> silver -> gold`
+- lưu trữ bằng `Hudi`
+- query qua `Trino`
+- orchestration bằng `Airflow`
 
-1. What has already been completed?
-2. What still needs to be implemented?
-3. What should be checked every day while developing?
-4. How should each phase be tested before moving on?
+Mục tiêu của file này là giúp trả lời nhanh:
+
+1. phần nào đã xong
+2. phần nào đang vận hành ổn
+3. hằng ngày cần kiểm tra gì
+4. bước tiếp theo nên làm gì
 
 ## Status legend
 
 - `[x]` completed
-- `[~]` in progress or partially done
+- `[~]` in progress
 - `[ ]` not started
 
-## Current project status snapshot
+## Current status snapshot
 
-### Foundation
+### Foundation and docs
 
 - `[x]` repository structure created
 - `[x]` architecture docs created
-- `[x]` mapping doc created
-- `[x]` Docker stack created
-- `[x]` core Docker services brought up successfully: `minio`, `metastore-postgres`, `hive-metastore`, `spark-master`, `spark-worker`, `trino`
-- `[x]` `.gitignore` added
+- `[x]` data mapping docs created
+- `[x]` Python pipeline docs created
+- `[x]` Hudi docs created
+- `[x]` Airflow docs created
+- `[x]` `.gitignore` created
 
-### Raw data
+### Local platform
 
-- `[x]` Olist source files present under `data/raw/olist/`
-- `[ ]` `products_api` source not implemented with real data yet
-- `[ ]` secondary source `online_retail_II.xlsx` not integrated
+- `[x]` `docker-compose.yml` created
+- `[x]` `MinIO` configured and used as local object storage
+- `[x]` `Hive Metastore + Postgres` configured
+- `[x]` `Spark master + worker` configured
+- `[x]` `Trino` configured
+- `[x]` `Airflow 3` configured
+- `[x]` execution API, auth, docker socket, and runtime issues fixed
 
-### Bronze layer
+### Data pipeline
 
-- `[x]` common bronze helpers implemented
-- `[x]` bronze jobs created for core entities
-- `[x]` bronze jobs created for supporting entities
-- `[~]` core bronze outputs created for main tables
-- `[~]` supporting bronze outputs need final rerun and verification after the `reviews` parser fix
+- `[x]` raw Olist source files available
+- `[x]` bronze jobs implemented
+- `[x]` silver jobs implemented
+- `[x]` gold jobs implemented
+- `[x]` full Hudi pipeline verified with expected row counts
+- `[x]` Trino gold query path verified
+- `[x]` Airflow DAG `hudi_full_pipeline` runs successfully
+- `[x]` data quality checks implemented for key silver and gold tables
 
-### Silver layer
+### Remaining scope
 
-- `[x]` common silver helpers implemented
-- `[x]` silver jobs created for core entities
-- `[x]` silver jobs created for supporting entities
-- `[x]` derived `products_silver` job created
-- `[ ]` silver jobs not fully executed and validated yet
+- `[ ]` secondary ingestion sources such as API and Excel not implemented
+- `[ ]` incremental Hudi write strategy not implemented yet
+- `[ ]` dashboard / BI demo not implemented yet
+- `[ ]` automated unit tests not implemented yet
 
-### Gold layer
+## Layer status
 
-- `[ ]` gold jobs not started
-- `[ ]` gold output tables not started
-- `[ ]` SQL validation queries for gold not started
+### Raw
 
-### Orchestration and serving
+- `[x]` `data/raw/olist/` present
+- `[x]` file names match pipeline expectations
+- `[x]` source datasets verified manually
 
-- `[ ]` Airflow DAGs not implemented
-- `[ ]` Hudi output mode not fully exercised
-- `[ ]` Trino table registration and query flow not implemented
-- `[ ]` dashboard or BI layer not implemented
+### Bronze
 
-## Phase-by-phase checklist
+- `[x]` core tables loaded
+- `[x]` supporting tables loaded
+- `[x]` multiline CSV handling fixed for reviews
+- `[x]` bronze Hudi record key strategy fixed to avoid dropping raw rows
 
-## Phase 1: Project and environment setup
+Expected bronze Hudi tables:
 
-### Checklist
+- `[x]` `orders_bronze`
+- `[x]` `order_items_bronze`
+- `[x]` `customers_bronze`
+- `[x]` `payments_bronze`
+- `[x]` `products_bronze`
+- `[x]` `sellers_bronze`
+- `[x]` `reviews_bronze`
+- `[x]` `geolocation_bronze`
+- `[x]` `product_category_translation_bronze`
 
-- `[x]` create repo folder structure
-- `[x]` create `README.md`
-- `[x]` create architecture docs
-- `[x]` create Docker stack docs
-- `[x]` create `.gitignore`
+### Silver
 
-### Files to inspect
+- `[x]` dedup and clean logic implemented
+- `[x]` source-aligned silver tables loaded
+- `[x]` derived `products_silver` loaded
 
-- [README.md](/home/dohaidang/bigdata_hudi/README.md:1)
-- [docs/architecture/project-structure.md](/home/dohaidang/bigdata_hudi/docs/architecture/project-structure.md:1)
-- [docs/architecture/system-design.md](/home/dohaidang/bigdata_hudi/docs/architecture/system-design.md:1)
-- [docs/architecture/data-mapping.md](/home/dohaidang/bigdata_hudi/docs/architecture/data-mapping.md:1)
-- [docs/runbooks/docker-stack.md](/home/dohaidang/bigdata_hudi/docs/runbooks/docker-stack.md:1)
+Expected silver Hudi tables:
 
-### Verification
+- `[x]` `orders_silver`
+- `[x]` `order_items_silver`
+- `[x]` `customers_silver`
+- `[x]` `payments_silver`
+- `[x]` `products_silver_base`
+- `[x]` `sellers_silver`
+- `[x]` `reviews_silver`
+- `[x]` `geolocation_silver`
+- `[x]` `product_category_translation_silver`
+- `[x]` `products_silver`
 
-- inspect the repo tree
-- confirm the docs match the intended architecture
+### Gold
 
-Commands:
+- `[x]` `daily_sales_gold`
+- `[x]` `category_sales_gold`
+- `[x]` `customer_ltv_gold`
+- `[x]` Hudi output verified
+- `[x]` Trino queries verified
 
-```bash
-find . -maxdepth 3 \( -type f -o -type d \) | sort
-```
+### Orchestration
 
-## Phase 2: Docker and local platform
+- `[x]` Airflow DAG created
+- `[x]` Airflow UI login working
+- `[x]` DAG runtime issues fixed
+- `[x]` Airflow executes Spark wrapper scripts through Docker
+- `[x]` Airflow runs Hudi verify step
+- `[x]` Airflow runs data quality checks
+- `[x]` Airflow runs Trino smoke checks
 
-### Checklist
+## Daily operating checklist
 
-- `[x]` create `docker-compose.yml`
-- `[x]` configure MinIO
-- `[x]` configure Hive Metastore + Postgres
-- `[x]` configure Trino
-- `[x]` configure Spark master and worker
-- `[x]` configure Airflow images and services
-- `[x]` fix image tag issues
-- `[x]` fix Hive metastore JDBC issue
-- `[x]` fix Trino S3 config and writable path issue
+### Infrastructure
 
-### Files to inspect
-
-- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
-- [docker/hive/Dockerfile](/home/dohaidang/bigdata_hudi/docker/hive/Dockerfile:1)
-- [docker/trino/catalog/hive.properties](/home/dohaidang/bigdata_hudi/docker/trino/catalog/hive.properties:1)
-- [docker/trino/node.properties](/home/dohaidang/bigdata_hudi/docker/trino/node.properties:1)
-- [configs/spark/spark-defaults.conf](/home/dohaidang/bigdata_hudi/configs/spark/spark-defaults.conf:1)
-- [docker/spark/start-master.sh](/home/dohaidang/bigdata_hudi/docker/spark/start-master.sh:1)
-- [docker/spark/start-worker.sh](/home/dohaidang/bigdata_hudi/docker/spark/start-worker.sh:1)
-
-### Verification
-
-- check service status
-- inspect health for MinIO and Trino
-- inspect logs for Hive and Trino
+- `[ ]` `docker compose ps` shows `minio`, `hive-metastore`, `spark-master`, `spark-worker`, `trino`, `airflow-*` as `Up`
+- `[ ]` `spark-master` is reachable before any Airflow run
+- `[ ]` `trino` is reachable before Trino smoke checks
+- `[ ]` `airflow-scheduler` and `airflow-webserver` show no auth or execution API errors
 
 Commands:
 
 ```bash
 docker compose ps
-docker compose logs --tail=120 hive-metastore
-docker compose logs --tail=120 trino
-curl http://localhost:8081/v1/info
+docker compose logs --tail=80 airflow-scheduler airflow-webserver airflow-dag-processor
+docker compose logs --tail=80 spark-master trino hive-metastore
 ```
 
-### Daily checks for this phase
+### Data pipeline
 
-- `docker compose ps` shows critical services as `Up`
-- `trino` is `healthy`
-- `hive-metastore` stays up and does not restart-loop
-- `spark-master` and `spark-worker` remain up
-
-## Phase 3: Raw data readiness
-
-### Checklist
-
-- `[x]` confirm Olist CSV files exist
-- `[x]` inspect sample rows from core files
-- `[x]` confirm row counts roughly match expectations
-- `[ ]` add optional API extraction source later
-- `[ ]` decide whether the Excel dataset is in scope later
-
-### Files to inspect
-
-- `data/raw/olist/olist_orders_dataset.csv`
-- `data/raw/olist/olist_order_items_dataset.csv`
-- `data/raw/olist/olist_customers_dataset.csv`
-- `data/raw/olist/olist_order_payments_dataset.csv`
-- `data/raw/olist/olist_products_dataset.csv`
-- `data/raw/olist/olist_order_reviews_dataset.csv`
-
-### Verification
+- `[ ]` latest Airflow DAG run is `success`
+- `[ ]` Hudi row-count verify passes
+- `[ ]` data quality checks pass
+- `[ ]` Trino gold smoke queries pass
 
 Commands:
 
 ```bash
-find data/raw -maxdepth 3 \( -type f -o -type d \) | sort
-sed -n '1,5p' data/raw/olist/olist_orders_dataset.csv
-sed -n '1,5p' data/raw/olist/olist_order_items_dataset.csv
-wc -l data/raw/olist/*.csv
+docker exec airflow-webserver airflow dags list-runs -d hudi_full_pipeline
+bash scripts/spark_submit_container.sh pipelines/tools/verify_hudi_pipeline.py
+bash scripts/spark_submit_container.sh pipelines/tools/run_data_quality_checks.py
+bash scripts/run_trino_gold_checks.sh
 ```
 
-### Daily checks for this phase
+## Manual execution checklist
 
-- source files are still present
-- filenames match the expected paths used by jobs
-- no one accidentally edits raw files manually
-
-## Phase 4: Bronze layer
-
-### Bronze implementation checklist
-
-#### Core bronze jobs
-
-- `[x]` `load_orders_bronze.py`
-- `[x]` `load_order_items_bronze.py`
-- `[x]` `load_customers_bronze.py`
-- `[x]` `load_payments_bronze.py`
-- `[x]` `load_products_bronze.py`
-
-#### Supporting bronze jobs
-
-- `[x]` `load_sellers_bronze.py`
-- `[x]` `load_reviews_bronze.py`
-- `[x]` `load_geolocation_bronze.py`
-- `[x]` `load_product_category_translation_bronze.py`
-
-#### Bronze helper code
-
-- `[x]` Spark session helper
-- `[x]` path helper
-- `[x]` metadata helper
-- `[x]` Hudi writer helper
-- `[x]` bronze writer helper
-- `[x]` direct script import-path fix
-- `[x]` CSV reader override support for multiline files
-
-### Files to inspect
-
-- [pipelines/common/bronze_job.py](/home/dohaidang/bigdata_hudi/pipelines/common/bronze_job.py:1)
-- [pipelines/common/hudi_writer.py](/home/dohaidang/bigdata_hudi/pipelines/common/hudi_writer.py:1)
-- [pipelines/bronze](/home/dohaidang/bigdata_hudi/pipelines/bronze)
-
-### Bronze execution checklist
-
-- `[x]` `orders_bronze` run and output created
-- `[x]` `order_items_bronze` run and output created
-- `[x]` `customers_bronze` run and output created
-- `[x]` `payments_bronze` run and output created
-- `[x]` `products_bronze` run and output created
-- `[~]` `reviews_bronze` must be rerun after multiline parser fix and rechecked
-- `[~]` `sellers_bronze` verify output exists
-- `[~]` `geolocation_bronze` verify output exists
-- `[~]` `product_category_translation_bronze` verify output exists
-
-### Commands to run bronze jobs
-
-Core:
+### Start the full local stack
 
 ```bash
-spark-submit pipelines/bronze/load_orders_bronze.py --output-format parquet --output-path data/bronze/orders_bronze
-spark-submit pipelines/bronze/load_order_items_bronze.py --output-format parquet --output-path data/bronze/order_items_bronze
-spark-submit pipelines/bronze/load_customers_bronze.py --output-format parquet --output-path data/bronze/customers_bronze
-spark-submit pipelines/bronze/load_payments_bronze.py --output-format parquet --output-path data/bronze/payments_bronze
-spark-submit pipelines/bronze/load_products_bronze.py --output-format parquet --output-path data/bronze/products_bronze
+docker compose up -d minio minio-init metastore-postgres hive-metastore spark-master spark-worker trino
+docker compose up -d airflow-postgres airflow-webserver airflow-dag-processor airflow-scheduler
 ```
 
-Supporting:
+### Run the full Hudi pipeline manually
 
 ```bash
-spark-submit pipelines/bronze/load_sellers_bronze.py --output-format parquet --output-path data/bronze/sellers_bronze
-spark-submit pipelines/bronze/load_reviews_bronze.py --output-format parquet --output-path data/bronze/reviews_bronze
-spark-submit pipelines/bronze/load_geolocation_bronze.py --output-format parquet --output-path data/bronze/geolocation_bronze
-spark-submit pipelines/bronze/load_product_category_translation_bronze.py --output-format parquet --output-path data/bronze/product_category_translation_bronze
+bash scripts/run_hudi_full_pipeline.sh
 ```
 
-### Bronze validation checklist
-
-For every bronze table:
-
-- `[ ]` output directory exists
-- `[ ]` `_SUCCESS` exists when non-partitioned output is used
-- `[ ]` partition directories exist where expected
-- `[ ]` schema types are correct for key columns
-- `[ ]` metadata columns exist
-- `[ ]` row count is reasonable compared to source
-- `[ ]` sample rows look aligned and not column-shifted
-
-### Bronze validation commands
-
-Check directories:
+### Verify the Hudi pipeline manually
 
 ```bash
-find data/bronze -maxdepth 2 \( -type f -o -type d \) | sort
+bash scripts/spark_submit_container.sh pipelines/tools/verify_hudi_pipeline.py
 ```
 
-Check schema:
+### Run data quality checks manually
 
 ```bash
-python - <<'PY'
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.appName("check_bronze_schema").getOrCreate()
-for path in [
-    "data/bronze/orders_bronze",
-    "data/bronze/order_items_bronze",
-    "data/bronze/customers_bronze",
-    "data/bronze/payments_bronze",
-    "data/bronze/products_bronze",
-]:
-    print(f"\n=== {path} ===")
-    spark.read.parquet(path).printSchema()
-spark.stop()
-PY
+bash scripts/spark_submit_container.sh pipelines/tools/run_data_quality_checks.py
 ```
 
-Check counts:
+### Run Trino gold smoke checks manually
 
 ```bash
-python - <<'PY'
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.appName("check_bronze_counts").getOrCreate()
-for path in [
-    "data/bronze/orders_bronze",
-    "data/bronze/order_items_bronze",
-    "data/bronze/customers_bronze",
-    "data/bronze/payments_bronze",
-    "data/bronze/products_bronze",
-]:
-    df = spark.read.parquet(path)
-    print(path, df.count())
-spark.stop()
-PY
+bash scripts/run_trino_gold_checks.sh
 ```
 
-Check sample rows:
+### Trigger the Airflow DAG
 
 ```bash
-python - <<'PY'
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.appName("check_bronze_samples").getOrCreate()
-spark.read.parquet("data/bronze/orders_bronze").show(5, truncate=False)
-spark.stop()
-PY
+docker exec airflow-webserver airflow dags trigger hudi_full_pipeline
 ```
 
-### Daily checks for bronze
-
-- rerun failed jobs immediately after code fix
-- confirm no table was written with shifted columns
-- confirm no cast errors are hidden in logs
-- confirm output path names match mapping doc
-- avoid mixing `parquet` and `hudi` outputs in the same path
-
-## Phase 5: Silver layer
-
-### Silver implementation checklist
-
-#### Core silver jobs
-
-- `[x]` `load_orders_silver.py`
-- `[x]` `load_order_items_silver.py`
-- `[x]` `load_customers_silver.py`
-- `[x]` `load_payments_silver.py`
-- `[x]` `load_products_silver_base.py`
-
-#### Supporting silver jobs
-
-- `[x]` `load_sellers_silver.py`
-- `[x]` `load_reviews_silver.py`
-- `[x]` `load_geolocation_silver.py`
-- `[x]` `load_product_category_translation_silver.py`
-
-#### Derived silver jobs
-
-- `[x]` `load_products_silver.py`
-- `[ ]` `products_api_silver` not implemented yet
-- `[ ]` `products_current_silver` not implemented yet
-- `[ ]` other derived silver views not implemented yet
-
-### Silver execution checklist
-
-- `[ ]` `orders_silver` run and output verified
-- `[ ]` `order_items_silver` run and output verified
-- `[ ]` `customers_silver` run and output verified
-- `[ ]` `payments_silver` run and output verified
-- `[ ]` `products_silver_base` run and output verified
-- `[ ]` `sellers_silver` run and output verified
-- `[ ]` `reviews_silver` run and output verified
-- `[ ]` `geolocation_silver` run and output verified
-- `[ ]` `product_category_translation_silver` run and output verified
-- `[ ]` `products_silver` run and output verified
-
-### Commands to run silver jobs
-
-Core:
-
-```bash
-spark-submit pipelines/silver/load_orders_silver.py
-spark-submit pipelines/silver/load_order_items_silver.py
-spark-submit pipelines/silver/load_customers_silver.py
-spark-submit pipelines/silver/load_payments_silver.py
-spark-submit pipelines/silver/load_products_silver_base.py
-```
-
-Supporting and derived:
-
-```bash
-spark-submit pipelines/silver/load_sellers_silver.py
-spark-submit pipelines/silver/load_reviews_silver.py
-spark-submit pipelines/silver/load_geolocation_silver.py
-spark-submit pipelines/silver/load_product_category_translation_silver.py
-spark-submit pipelines/silver/load_products_silver.py
-```
-
-### Silver validation checklist
-
-For every silver table:
-
-- `[ ]` output directory exists
-- `[ ]` deduplicated keys behave as expected
-- `[ ]` text normalization is visible in sample rows
-- `[ ]` numeric types are preserved
-- `[ ]` no obviously malformed rows remain
-- `[ ]` derived columns exist where expected
-- `[ ]` joins do not duplicate unexpectedly
-
-### Silver validation commands
-
-Schema and samples:
-
-```bash
-python - <<'PY'
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.appName("check_silver").getOrCreate()
-for path in [
-    "data/silver/orders_silver",
-    "data/silver/order_items_silver",
-    "data/silver/customers_silver",
-    "data/silver/payments_silver",
-    "data/silver/products_silver",
-]:
-    print(f"\n=== {path} ===")
-    df = spark.read.parquet(path)
-    df.printSchema()
-    df.show(3, truncate=False)
-spark.stop()
-PY
-```
-
-Example quality checks:
-
-```bash
-python - <<'PY'
-from pyspark.sql import SparkSession, functions as F
-spark = SparkSession.builder.appName("silver_quality").getOrCreate()
-orders = spark.read.parquet("data/silver/orders_silver")
-orders.select(
-    F.count("*").alias("rows"),
-    F.countDistinct("order_id").alias("distinct_order_id"),
-    F.sum(F.col("order_id").isNull().cast("int")).alias("null_order_id")
-).show()
-spark.stop()
-PY
-```
-
-### Daily checks for silver
-
-- rerun upstream bronze if schema changed
-- check deduplication did not drop too many rows
-- confirm joins and enrichments preserve intended granularity
-- inspect one sample table after every code change
-
-## Phase 6: Gold layer
-
-### Implementation checklist
-
-- `[ ]` create `daily_sales_gold`
-- `[ ]` create `category_sales_gold`
-- `[ ]` create `customer_ltv_gold`
-- `[ ]` optionally create `delivery_performance_gold`
-- `[ ]` optionally create `seller_performance_gold`
-
-### Required inputs
-
-- `orders_silver`
-- `order_items_silver`
-- `payments_silver`
-- `customers_silver`
-- `products_silver`
-
-### Testing checklist
-
-- `[ ]` row counts are non-zero
-- `[ ]` daily revenue looks plausible
-- `[ ]` no duplicate customer totals unless intentionally grouped
-- `[ ]` category totals join correctly to product dimension
-
-## Phase 7: Trino and query layer
-
-### Implementation checklist
-
-- `[ ]` define SQL DDL or external catalog expectations
-- `[ ]` expose tables through Trino
-- `[ ]` validate `SHOW CATALOGS`
-- `[ ]` validate `SHOW SCHEMAS`
-- `[ ]` run simple `SELECT COUNT(*)` queries
-
-### Testing checklist
-
-- `[ ]` Trino can see Hive-backed metadata
-- `[ ]` Trino can read the expected data locations
-- `[ ]` sample gold query returns rows
-
-## Phase 8: Airflow orchestration
-
-### Implementation checklist
-
-- `[ ]` create DAG for bronze loads
-- `[ ]` create DAG for silver loads
-- `[ ]` create DAG for gold marts
-- `[ ]` add retry policy
-- `[ ]` add simple post-load checks
-
-### Testing checklist
-
-- `[ ]` DAG parses successfully
-- `[ ]` manual DAG run succeeds
-- `[ ]` failed task is retryable
-- `[ ]` task dependency order is correct
-
-## Phase 9: Hudi mode
-
-### Implementation checklist
-
-- `[ ]` download required Hudi jars into `jars/`
-- `[ ]` validate Spark can load Hudi format
-- `[ ]` run bronze jobs with `--output-format hudi`
-- `[ ]` run silver jobs with `--output-format hudi`
-- `[ ]` test record keys and precombine behavior
-
-### Testing checklist
-
-- `[ ]` Spark write with format `hudi` succeeds
-- `[ ]` output contains Hudi metadata files
-- `[ ]` rerun of the same table behaves as upsert rather than broken duplicate write
-
-## Phase 10: Optional extensions
-
-### Optional implementation checklist
-
-- `[ ]` products API extraction
-- `[ ]` `products_api_bronze`
-- `[ ]` `products_api_silver`
-- `[ ]` `products_current_silver`
-- `[ ]` BI dashboard
-- `[ ]` data quality framework
-- `[ ]` monitoring and metrics
-- `[ ]` CI validation
-
-## Daily working checklist
-
-Use this every day before and after coding.
-
-### Before coding
-
-- `[ ]` confirm Docker core services still start
-- `[ ]` confirm raw data paths still exist
-- `[ ]` decide which layer you are working on today
-- `[ ]` check the mapping doc before adding new tables
-
-### While coding
-
-- `[ ]` keep changes within one layer at a time when possible
-- `[ ]` after each edit, rerun only the affected job first
-- `[ ]` inspect schema and sample rows, not only file existence
-- `[ ]` avoid changing raw inputs manually
-
-### After coding
-
-- `[ ]` re-run the affected job
-- `[ ]` check output directory
-- `[ ]` check row count
-- `[ ]` check sample rows
-- `[ ]` capture any known limitation in docs if needed
-
-## Test matrix
-
-Use this to know what kind of test belongs where.
-
-### Infrastructure tests
-
-Where:
-- Docker services
-
-How:
-- `docker compose ps`
-- `docker compose logs`
-- `curl http://localhost:8081/v1/info`
-
-### Raw data tests
-
-Where:
-- `data/raw/`
-
-How:
-- `find`
-- `sed`
-- `wc -l`
-
-### Bronze tests
-
-Where:
-- `data/bronze/`
-
-How:
-- `spark.read.parquet(...)`
-- `printSchema()`
-- `count()`
-- `show()`
-
-### Silver tests
-
-Where:
-- `data/silver/`
-
-How:
-- row counts
-- distinct key counts
-- null checks
-- sample joins and enrichment checks
-
-### Gold tests
-
-Where:
-- `data/gold/`
-
-How:
-- business metric sanity checks
-- aggregation correctness
-- join correctness
-
-### Serving tests
-
-Where:
-- Trino
-- Airflow
-
-How:
-- SQL smoke queries
-- DAG parse and manual run
-
-## Immediate next actions
-
-These are the most useful next steps from the current project state.
-
-1. Re-run and verify `reviews_bronze` after the multiline CSV parser fix.
-2. Verify `sellers_bronze`, `geolocation_bronze`, and `product_category_translation_bronze` outputs.
-3. Run the full `silver` batch.
-4. Validate all silver outputs with schema, count, and sample-row checks.
-5. Start implementing the three MVP gold marts.
-
-## Definition of done for MVP
-
-The MVP should be considered complete when all of these are true:
-
-- `[ ]` core Docker services are stable
-- `[ ]` all required bronze tables are generated
-- `[ ]` all required silver tables are generated
-- `[ ]` `products_silver` enrichment works
-- `[ ]` at least three gold marts are generated
-- `[ ]` outputs are queryable or at least validated locally
-- `[ ]` pipeline flow is documented and reproducible
-
-At that point, the project is ready for the next step: hardening, Hudi-mode runs, and orchestration.
+## What the quality checks cover
+
+Current data quality checks focus on semantic integrity for key `silver` and `gold` tables.
+
+### Silver checks
+
+- `[x]` `orders_silver`
+  - `order_id`, `customer_id`, `order_purchase_date` are not null
+  - `order_id` is unique
+  - `order_status` is trimmed lowercase
+- `[x]` `customers_silver`
+  - `customer_id`, `customer_unique_id`, `customer_state` are not null
+  - `customer_id` is unique
+  - `customer_state` has length `2`
+- `[x]` `payments_silver`
+  - `payment_key`, `order_id`, `payment_type` are not null
+  - `payment_key` is unique
+  - `payment_value >= 0`
+  - `payment_installments > 0`
+- `[x]` `reviews_silver`
+  - `review_id`, `order_id`, `review_score` are not null
+  - `review_id` is unique
+  - `review_score` is between `1` and `5`
+- `[x]` `geolocation_silver`
+  - `geolocation_key`, `geolocation_zip_code_prefix`, `geolocation_state` are not null
+  - `geolocation_key` is unique
+  - `geolocation_state` has length `2`
+- `[x]` `products_silver`
+  - `product_id` is not null
+  - `product_id` is unique
+
+### Gold checks
+
+- `[x]` `daily_sales_gold`
+  - `order_date` is not null
+  - grain by `order_date` is unique
+  - `order_count > 0`
+  - `payment_value >= 0`
+  - `gross_item_value >= 0`
+- `[x]` `category_sales_gold`
+  - `order_purchase_date` and `category_name` are not null
+  - grain by `order_purchase_date + category_name` is unique
+  - gross values are not negative
+  - counts are positive
+- `[x]` `customer_ltv_gold`
+  - `customer_id`, `customer_unique_id`, `order_count`, `lifetime_value`, `ltv_rank` are not null
+  - `customer_id` is unique
+  - `ltv_rank` is unique
+  - `order_count > 0`
+  - `lifetime_value >= 0`
+  - `first_order_date <= last_order_date`
+
+## Definition of done for current MVP
+
+Current MVP is considered done when all items below hold:
+
+- `[x]` data can be ingested into Hudi
+- `[x]` `bronze -> silver -> gold` runs end to end
+- `[x]` Hudi outputs can be verified by Spark
+- `[x]` gold marts can be queried by Trino
+- `[x]` pipeline can be orchestrated by Airflow
+- `[x]` quality checks can be run automatically
+
+## Next technical priorities
+
+### Priority 1
+
+- `[ ]` add incremental or upsert-oriented Hudi strategy where appropriate
+- `[ ]` add partition and freshness monitoring
+- `[ ]` add retry and alerting policy for Airflow tasks
+
+### Priority 2
+
+- `[ ]` add unit tests for shared Python helpers
+- `[ ]` add integration tests for critical tables
+- `[ ]` add CI commands for syntax and smoke validation
+
+### Priority 3
+
+- `[ ]` add dashboard or BI demo on top of `hive.analytics.*`
+- `[ ]` add more business marts beyond the current gold set
