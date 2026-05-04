@@ -159,7 +159,7 @@ Open local UIs:
 - Trino: `http://localhost:8081`
 - Spark master UI: `http://localhost:8082`
 - Spark worker UI: `http://localhost:8083`
-- MinIO console: `http://localhost:9001`
+- MinIO console: `http://localhost:9011`
 - Metabase: `http://localhost:3000`
 
 Detailed structure documentation: [docs/architecture/project-structure.md](/home/dohaidang/bigdata_hudi/docs/architecture/project-structure.md:1)
