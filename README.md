@@ -120,6 +120,14 @@ Key analytical outputs:
 
 ## Setup
 
+Download the required Hudi runtime JARs first:
+
+```bash
+bash scripts/download_hudi_jars.sh
+```
+
+This step is recommended immediately after a fresh clone or pull because the Hudi pipeline depends on the runtime JARs stored in `./jars`.
+
 Start the full local stack:
 
 ```bash
@@ -131,6 +139,12 @@ docker compose up -d \
   airflow-postgres airflow-init airflow-webserver airflow-dag-processor airflow-scheduler \
   metabase-postgres metabase
 ```
+
+Notes:
+
+- You can still start the Docker stack without downloading the JARs first.
+- However, to run the Hudi ETL pipeline successfully, the JARs should already exist in `./jars`.
+- If the stack is already running, downloading the JARs afterwards is still fine because `./jars` is mounted into the Spark and Airflow containers.
 
 Run the full Hudi pipeline:
 
