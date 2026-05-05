@@ -190,140 +190,264 @@ Project checklist: [docs/runbooks/project-checklist.md](/home/dohaidang/bigdata_
 
 ## Parameter Tuning
 
-This project can be adjusted at multiple layers depending on the available machine resources, the dataset size, and the type of workload being demonstrated. In practice, tuning usually focuses on `Spark`, `Hudi`, `MinIO/S3A`, `Hive Metastore`, `Trino`, `Airflow`, and `Metabase`.
+This section lists the main parameters that are actually used in the current project, where they are defined, and what they control.
 
-### 1. Spark
+### 1. Spark Runtime
 
-`Spark` is the main processing engine for the `bronze`, `silver`, and `gold` pipeline layers. The most common parameters to tune are:
-
-- `spark.executor.memory`
-  - Increase when joins, aggregations, or Hudi writes start spilling heavily.
-- `spark.driver.memory`
-  - Increase when local planning or large metadata operations become slow.
-- `spark.sql.shuffle.partitions`
-  - Reduce for small local demos to avoid too many tiny tasks.
-  - Increase for larger datasets when parallelism becomes a bottleneck.
-- `spark.default.parallelism`
-  - Useful when testing on a machine with more CPU cores.
-- `spark.sql.adaptive.enabled`
-  - Keep enabled for better local query execution behavior.
-
-Current Spark runtime configuration is mainly controlled in:
+Main file:
 
 - [configs/spark/spark-defaults.conf](/home/dohaidang/bigdata_hudi/configs/spark/spark-defaults.conf:1)
-- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
 
-### 2. Hudi
+Parameters currently used:
 
-`Hudi` is the core storage layer of the lakehouse. It is used to manage table versions, support `upsert` semantics, and enable `time travel` on top of object storage.
+- `spark.master=spark://spark-master:7077`
+  - Spark jobs submit to the `spark-master` container.
+- `spark.eventLog.enabled=false`
+  - Event logging is disabled in this local stack.
+- `spark.sql.session.timeZone=Asia/Ho_Chi_Minh`
+  - Keeps timestamps aligned with the local demo timezone.
+- `spark.hadoop.fs.s3a.endpoint=http://minio:9000`
+  - Internal Spark-to-MinIO endpoint inside Docker.
+- `spark.hadoop.fs.s3a.access.key=minioadmin`
+  - MinIO access key used by Spark.
+- `spark.hadoop.fs.s3a.secret.key=minioadmin`
+  - MinIO secret key used by Spark.
+- `spark.hadoop.fs.s3a.path.style.access=true`
+  - Required for MinIO compatibility.
+- `spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem`
+  - Enables the `s3a://` filesystem implementation.
+- `spark.hadoop.fs.s3a.connection.ssl.enabled=false`
+  - SSL is disabled in this local environment.
+- `spark.hadoop.hive.metastore.uris=thrift://hive-metastore:9083`
+  - Spark connects to the Hive Metastore service through Thrift.
 
-Important Hudi parameters include:
+Additional Spark session defaults are set in:
 
-- `hoodie.datasource.write.recordkey.field`
-  - Defines the business key used to identify a record.
-- `hoodie.datasource.write.precombine.field`
-  - Defines which record version wins during upsert.
-- `hoodie.datasource.write.operation`
-  - Common values:
-    - `insert`
-    - `upsert`
-    - `bulk_insert`
-- `hoodie.table.type`
-  - `COPY_ON_WRITE` is better for BI-style reads.
-  - `MERGE_ON_READ` is better when write frequency is higher.
-- `hoodie.cleaner.commits.retained`
-  - Controls how many commits are retained before cleanup.
-- `hoodie.keep.min.commits` and `hoodie.keep.max.commits`
-  - Affect timeline retention and the depth of `time travel`.
+- [pipelines/common/spark_session.py](/home/dohaidang/bigdata_hudi/pipelines/common/spark_session.py:1)
 
-In this project, Hudi parameters are typically defined inside the Spark pipeline code, especially around:
+Those defaults are:
 
-- `pipelines/common/hudi_writer.py`
-- specific `bronze` and `silver` jobs
+- `spark.sql.session.timeZone=Asia/Ho_Chi_Minh`
+- `spark.sql.sources.partitionOverwriteMode=dynamic`
+- `spark.serializer=org.apache.spark.serializer.KryoSerializer`
+  - This serializer is enabled automatically when a Hudi JAR is detected.
 
-### 3. MinIO and S3A
+### 2. Hudi Write Parameters
 
-`MinIO` is used as the object storage backend for the lakehouse. `Spark` and `Hudi` access it through the Hadoop `s3a://` connector.
+Main file:
 
-Common parameters to adjust:
+- [pipelines/common/hudi_writer.py](/home/dohaidang/bigdata_hudi/pipelines/common/hudi_writer.py:1)
 
-- `fs.s3a.endpoint`
-  - Internal container-to-container access should use `http://minio:9000`.
-- `fs.s3a.path.style.access`
-  - Should stay enabled for MinIO compatibility.
-- `fs.s3a.access.key` and `fs.s3a.secret.key`
-  - Must match the MinIO credentials used by the stack.
-- `fs.s3a.connection.ssl.enabled`
-  - Disabled in this local demo setup.
+Common Hudi options currently used for pipeline writes:
 
-Important note:
+- `hoodie.table.name=<table_name>`
+  - Logical Hudi table name.
+- `hoodie.datasource.write.table.type=COPY_ON_WRITE`
+  - The project currently uses `COPY_ON_WRITE`.
+- `hoodie.datasource.write.operation=upsert`
+  - All writes use `upsert` semantics by default.
+- `hoodie.datasource.write.recordkey.field=<record_key>`
+  - Business key used to identify each record.
+- `hoodie.datasource.write.precombine.field=<precombine_field>`
+  - Field used to determine the latest version of a record.
+- `hoodie.datasource.write.hive_style_partitioning=true`
+  - Enables Hive-style partition folder naming.
+- `hoodie.datasource.write.reconcile.schema=true`
+  - Allows schema reconciliation during writes.
+- `hoodie.upsert.shuffle.parallelism=2`
+  - Shuffle parallelism for upsert operations.
+- `hoodie.insert.shuffle.parallelism=2`
+  - Shuffle parallelism for insert operations.
+- `hoodie.clean.automatic=true`
+  - Enables automatic Hudi cleaning.
+- `hoodie.datasource.write.partitionpath.field=<partition_field>`
+  - Only set when the table is partitioned.
+- `hoodie.datasource.hive_sync.partition_fields=<partition_field>`
+  - Used together with partitioned tables.
+- `hoodie.datasource.write.keygenerator.class=org.apache.hudi.keygen.NonpartitionedKeyGenerator`
+  - Used when the table is non-partitioned.
 
-- Host ports such as `9010` and `9011` are for browser or host access.
-- Internal services in Docker should still use `minio:9000`, not `localhost:9010`.
+These parameters are the core of the Hudi behavior in this project:
 
-Configuration lives mainly in:
+- `COPY_ON_WRITE` is chosen for BI-friendly reads.
+- `upsert` is chosen to support incremental-style table maintenance.
+- `recordkey` and `precombine` determine how duplicate business records are resolved.
+
+### 3. MinIO and Hadoop S3A
+
+Main file:
 
 - [configs/hadoop/core-site.xml](/home/dohaidang/bigdata_hudi/configs/hadoop/core-site.xml:1)
+
+Parameters currently used:
+
+- `fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem`
+- `fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem`
+- `fs.AbstractFileSystem.s3a.impl=org.apache.hadoop.fs.s3a.S3A`
+- `fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`
+- `fs.s3a.access.key=minioadmin`
+- `fs.s3a.secret.key=minioadmin`
+- `fs.s3a.endpoint=http://minio:9000`
+- `fs.s3a.path.style.access=true`
+- `fs.s3a.connection.ssl.enabled=false`
+
+Important runtime note:
+
+- Host access to MinIO uses:
+  - `http://localhost:9010` for the S3 API
+  - `http://localhost:9011` for the MinIO console
+- Internal service-to-service access still uses:
+  - `http://minio:9000`
+
+Those host ports are defined in:
+
 - [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
 
-### 4. Hive Metastore
+### 4. Docker Service Parameters
 
-`Hive Metastore` stores table metadata so that `Trino` can discover and query the `gold` layer.
-
-Typical tuning points:
-
-- PostgreSQL connection settings for the metastore backend
-- warehouse location
-- metastore startup dependency order
-- table registration and partition synchronization flow
-
-Most of this project keeps Hive Metastore relatively simple because the focus is on local lakehouse interoperability rather than high-scale metadata tuning.
-
-Relevant files:
+Main file:
 
 - [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
-- `docker/hive/` config files
 
-### 5. Trino
+Important container-level parameters currently used:
 
-`Trino` is the SQL query engine used to expose curated Hudi-backed outputs for validation and BI.
+- `MINIO_ROOT_USER=minioadmin`
+- `MINIO_ROOT_PASSWORD=minioadmin`
+- `minio` ports:
+  - `9010:9000`
+  - `9011:9001`
+- `spark-worker` resources:
+  - `SPARK_WORKER_MEMORY=2G`
+  - `SPARK_WORKER_CORES=2`
+- `trino` host port:
+  - `8081:8080`
+- `hive-metastore` host port:
+  - `9083:9083`
+- `airflow-webserver` host port:
+  - `8080:8080`
+- `metabase` host port:
+  - `3000:3000`
+- `metastore-postgres` host port:
+  - `5433:5432`
+- `airflow-postgres` host port:
+  - `5434:5432`
 
-Useful parameters to tune:
+### 5. Hive Metastore
 
-- memory-related query limits
-- worker concurrency
-- catalog properties
-- compatibility settings for BI tools
+Main configuration sources:
 
-In this project, one especially important runtime setting is the compatibility header for legacy `Presto`-based clients such as `Metabase`:
+- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
+- [docker/hive/Dockerfile](/home/dohaidang/bigdata_hudi/docker/hive/Dockerfile:1)
 
-- `protocol.v1.alternate-header-name=Presto`
+Parameters currently used:
 
-Relevant file:
+- `SERVICE_NAME=metastore`
+- `DB_DRIVER=postgres`
+- `ConnectionDriverName=org.postgresql.Driver`
+- `ConnectionURL=jdbc:postgresql://metastore-postgres:5432/metastore_db`
+- `ConnectionUserName=hive`
+- `ConnectionPassword=hive`
+
+The Hive image also adds supporting JARs for:
+
+- PostgreSQL JDBC
+- `hadoop-aws`
+- `aws-java-sdk-bundle`
+
+This is required so Hive Metastore can work correctly with Postgres and S3-compatible storage.
+
+### 6. Trino
+
+Main files:
 
 - [docker/trino/config.properties](/home/dohaidang/bigdata_hudi/docker/trino/config.properties:1)
+- [docker/trino/jvm.config](/home/dohaidang/bigdata_hudi/docker/trino/jvm.config:1)
+- [docker/trino/node.properties](/home/dohaidang/bigdata_hudi/docker/trino/node.properties:1)
+- [docker/trino/catalog/hive.properties](/home/dohaidang/bigdata_hudi/docker/trino/catalog/hive.properties:1)
 
-### 6. Airflow
+Coordinator parameters currently used:
 
-`Airflow` orchestrates the end-to-end ETL pipeline. For local demos, tuning is usually less about scale and more about startup order, retries, and task visibility.
+- `coordinator=true`
+- `node-scheduler.include-coordinator=true`
+- `http-server.http.port=8080`
+- `discovery.uri=http://trino:8080`
+- `protocol.v1.alternate-header-name=Presto`
+  - Important for Metabase compatibility.
 
-Common parameters:
+JVM parameters currently used:
 
-- retries and retry delay
-- schedule interval
-- task dependencies between `bronze`, `silver`, `gold`, and validation steps
-- service startup sequencing for `Spark`, `MinIO`, `Hive Metastore`, and `Trino`
+- `-Xmx2G`
+- `-XX:+UseG1GC`
+- `-XX:G1HeapRegionSize=32M`
+- `-XX:+ExplicitGCInvokesConcurrent`
+- `-XX:+ExitOnOutOfMemoryError`
 
-Relevant locations:
+Node parameters currently used:
 
+- `node.environment=local`
+- `node.id=trino-coordinator`
+- `node.data-dir=/tmp/trino`
+
+Hive catalog parameters currently used:
+
+- `connector.name=hive`
+- `hive.metastore.uri=thrift://hive-metastore:9083`
+- `fs.native-s3.enabled=true`
+- `s3.endpoint=http://minio:9000`
+- `s3.region=us-east-1`
+- `s3.aws-access-key=${ENV:MINIO_ROOT_USER}`
+- `s3.aws-secret-key=${ENV:MINIO_ROOT_PASSWORD}`
+- `s3.path-style-access=true`
+- `hive.non-managed-table-writes-enabled=true`
+- `hive.non-managed-table-creates-enabled=true`
+
+### 7. Airflow
+
+Main files:
+
+- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
 - [dags/hudi_pipeline_dag.py](/home/dohaidang/bigdata_hudi/dags/hudi_pipeline_dag.py:1)
+
+Airflow container environment parameters currently used:
+
+- `AIRFLOW__CORE__EXECUTOR=LocalExecutor`
+- `AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true`
+- `AIRFLOW__CORE__LOAD_EXAMPLES=false`
+- `AIRFLOW__CORE__DEFAULT_TIMEZONE=Asia/Ho_Chi_Minh`
+- `AIRFLOW__CORE__AUTH_MANAGER=airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager`
+- `AIRFLOW__CORE__EXECUTION_API_SERVER_URL=http://airflow-webserver:8080/execution/`
+- `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow`
+- `AIRFLOW_UID=50000`
+
+DAG-level parameters currently used:
+
+- `dag_id=hudi_full_pipeline`
+- `start_date=datetime(2026, 5, 3)`
+- `schedule=None`
+- `catchup=False`
+- `max_active_runs=1`
+- `retries=1`
+- `retry_delay=5 minutes`
+- `execution_timeout=1 hour` for Spark and validation tasks
+
+### 8. Metabase
+
+Main service configuration source:
+
 - [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
 
-### 7. Metabase
+Metabase application parameters currently used:
 
-`Metabase` is used for BI visualization on top of `Trino`.
+- `MB_DB_TYPE=postgres`
+- `MB_DB_DBNAME=metabaseappdb`
+- `MB_DB_PORT=5432`
+- `MB_DB_USER=metabase`
+- `MB_DB_PASS=metabase`
+- `MB_DB_HOST=metabase-postgres`
+- `JAVA_TIMEZONE=Asia/Ho_Chi_Minh`
+- `MB_SITE_URL=http://localhost:3000`
 
-The main settings to pay attention to are:
+When connecting Metabase to Trino in the UI, the effective connection settings used by this project are:
 
 - database type: `Presto`
 - host: `trino`
@@ -331,30 +455,6 @@ The main settings to pay attention to are:
 - catalog: `hive`
 - schema: `analytics`
 - username: `trino`
-
-For local demos, Metabase tuning is mostly connection-oriented rather than performance-oriented.
-
-### 8. Practical Tuning Strategy
-
-For this project, parameter tuning should follow a simple order:
-
-1. Ensure `MinIO`, `Spark`, `Hive Metastore`, and `Trino` connectivity is correct.
-2. Tune Spark parallelism and memory for stable ETL execution.
-3. Tune Hudi write parameters depending on whether the goal is batch loading, incremental upsert, or time travel demo.
-4. Tune Trino only after the `gold` layer is already queryable.
-5. Keep Metabase configuration minimal and focused on connectivity.
-
-### 9. Summary
-
-In this architecture:
-
-- `Spark` controls compute behavior.
-- `Hudi` controls storage semantics such as upsert and time travel.
-- `MinIO` provides object storage.
-- `Hive Metastore` provides metadata management.
-- `Trino` provides SQL access.
-- `Airflow` provides orchestration.
-- `Metabase` provides BI presentation.
 
 ## Directory layout
 
