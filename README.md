@@ -188,6 +188,174 @@ Hudi incremental/time travel demo: [docs/runbooks/hudi-incremental-time-travel-d
 
 Project checklist: [docs/runbooks/project-checklist.md](/home/dohaidang/bigdata_hudi/docs/runbooks/project-checklist.md:1)
 
+## Parameter Tuning
+
+This project can be adjusted at multiple layers depending on the available machine resources, the dataset size, and the type of workload being demonstrated. In practice, tuning usually focuses on `Spark`, `Hudi`, `MinIO/S3A`, `Hive Metastore`, `Trino`, `Airflow`, and `Metabase`.
+
+### 1. Spark
+
+`Spark` is the main processing engine for the `bronze`, `silver`, and `gold` pipeline layers. The most common parameters to tune are:
+
+- `spark.executor.memory`
+  - Increase when joins, aggregations, or Hudi writes start spilling heavily.
+- `spark.driver.memory`
+  - Increase when local planning or large metadata operations become slow.
+- `spark.sql.shuffle.partitions`
+  - Reduce for small local demos to avoid too many tiny tasks.
+  - Increase for larger datasets when parallelism becomes a bottleneck.
+- `spark.default.parallelism`
+  - Useful when testing on a machine with more CPU cores.
+- `spark.sql.adaptive.enabled`
+  - Keep enabled for better local query execution behavior.
+
+Current Spark runtime configuration is mainly controlled in:
+
+- [configs/spark/spark-defaults.conf](/home/dohaidang/bigdata_hudi/configs/spark/spark-defaults.conf:1)
+- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
+
+### 2. Hudi
+
+`Hudi` is the core storage layer of the lakehouse. It is used to manage table versions, support `upsert` semantics, and enable `time travel` on top of object storage.
+
+Important Hudi parameters include:
+
+- `hoodie.datasource.write.recordkey.field`
+  - Defines the business key used to identify a record.
+- `hoodie.datasource.write.precombine.field`
+  - Defines which record version wins during upsert.
+- `hoodie.datasource.write.operation`
+  - Common values:
+    - `insert`
+    - `upsert`
+    - `bulk_insert`
+- `hoodie.table.type`
+  - `COPY_ON_WRITE` is better for BI-style reads.
+  - `MERGE_ON_READ` is better when write frequency is higher.
+- `hoodie.cleaner.commits.retained`
+  - Controls how many commits are retained before cleanup.
+- `hoodie.keep.min.commits` and `hoodie.keep.max.commits`
+  - Affect timeline retention and the depth of `time travel`.
+
+In this project, Hudi parameters are typically defined inside the Spark pipeline code, especially around:
+
+- `pipelines/common/hudi_writer.py`
+- specific `bronze` and `silver` jobs
+
+### 3. MinIO and S3A
+
+`MinIO` is used as the object storage backend for the lakehouse. `Spark` and `Hudi` access it through the Hadoop `s3a://` connector.
+
+Common parameters to adjust:
+
+- `fs.s3a.endpoint`
+  - Internal container-to-container access should use `http://minio:9000`.
+- `fs.s3a.path.style.access`
+  - Should stay enabled for MinIO compatibility.
+- `fs.s3a.access.key` and `fs.s3a.secret.key`
+  - Must match the MinIO credentials used by the stack.
+- `fs.s3a.connection.ssl.enabled`
+  - Disabled in this local demo setup.
+
+Important note:
+
+- Host ports such as `9010` and `9011` are for browser or host access.
+- Internal services in Docker should still use `minio:9000`, not `localhost:9010`.
+
+Configuration lives mainly in:
+
+- [configs/hadoop/core-site.xml](/home/dohaidang/bigdata_hudi/configs/hadoop/core-site.xml:1)
+- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
+
+### 4. Hive Metastore
+
+`Hive Metastore` stores table metadata so that `Trino` can discover and query the `gold` layer.
+
+Typical tuning points:
+
+- PostgreSQL connection settings for the metastore backend
+- warehouse location
+- metastore startup dependency order
+- table registration and partition synchronization flow
+
+Most of this project keeps Hive Metastore relatively simple because the focus is on local lakehouse interoperability rather than high-scale metadata tuning.
+
+Relevant files:
+
+- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
+- `docker/hive/` config files
+
+### 5. Trino
+
+`Trino` is the SQL query engine used to expose curated Hudi-backed outputs for validation and BI.
+
+Useful parameters to tune:
+
+- memory-related query limits
+- worker concurrency
+- catalog properties
+- compatibility settings for BI tools
+
+In this project, one especially important runtime setting is the compatibility header for legacy `Presto`-based clients such as `Metabase`:
+
+- `protocol.v1.alternate-header-name=Presto`
+
+Relevant file:
+
+- [docker/trino/config.properties](/home/dohaidang/bigdata_hudi/docker/trino/config.properties:1)
+
+### 6. Airflow
+
+`Airflow` orchestrates the end-to-end ETL pipeline. For local demos, tuning is usually less about scale and more about startup order, retries, and task visibility.
+
+Common parameters:
+
+- retries and retry delay
+- schedule interval
+- task dependencies between `bronze`, `silver`, `gold`, and validation steps
+- service startup sequencing for `Spark`, `MinIO`, `Hive Metastore`, and `Trino`
+
+Relevant locations:
+
+- [dags/hudi_pipeline_dag.py](/home/dohaidang/bigdata_hudi/dags/hudi_pipeline_dag.py:1)
+- [docker-compose.yml](/home/dohaidang/bigdata_hudi/docker-compose.yml:1)
+
+### 7. Metabase
+
+`Metabase` is used for BI visualization on top of `Trino`.
+
+The main settings to pay attention to are:
+
+- database type: `Presto`
+- host: `trino`
+- port: `8080`
+- catalog: `hive`
+- schema: `analytics`
+- username: `trino`
+
+For local demos, Metabase tuning is mostly connection-oriented rather than performance-oriented.
+
+### 8. Practical Tuning Strategy
+
+For this project, parameter tuning should follow a simple order:
+
+1. Ensure `MinIO`, `Spark`, `Hive Metastore`, and `Trino` connectivity is correct.
+2. Tune Spark parallelism and memory for stable ETL execution.
+3. Tune Hudi write parameters depending on whether the goal is batch loading, incremental upsert, or time travel demo.
+4. Tune Trino only after the `gold` layer is already queryable.
+5. Keep Metabase configuration minimal and focused on connectivity.
+
+### 9. Summary
+
+In this architecture:
+
+- `Spark` controls compute behavior.
+- `Hudi` controls storage semantics such as upsert and time travel.
+- `MinIO` provides object storage.
+- `Hive Metastore` provides metadata management.
+- `Trino` provides SQL access.
+- `Airflow` provides orchestration.
+- `Metabase` provides BI presentation.
+
 ## Directory layout
 
 - `docker/`: container definitions and service-specific assets
@@ -208,9 +376,3 @@ Project checklist: [docs/runbooks/project-checklist.md](/home/dohaidang/bigdata_
 - `docs/runbooks/`: operational steps and troubleshooting
 - `scripts/`: bootstrap and local utility scripts
 - `tests/`: pipeline tests
-
-## Immediate next steps
-
-1. Expand freshness, drift, and reconciliation checks beyond the current baseline rules.
-2. Add incremental Hudi write patterns where full reload is not the right long-term behavior.
-3. Add dashboard or BI demo queries on top of `hive.analytics.*`.
