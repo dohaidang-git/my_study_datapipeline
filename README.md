@@ -145,6 +145,8 @@ Notes:
 - You can still start the Docker stack without downloading the JARs first.
 - However, to run the Hudi ETL pipeline successfully, the JARs should already exist in `./jars`.
 - If the stack is already running, downloading the JARs afterwards is still fine because `./jars` is mounted into the Spark and Airflow containers.
+- On Windows, prefer `Git Bash` or `WSL` when running the shell scripts in this repository.
+- The runner scripts now include a compatibility shim for `docker exec` path handling in `Git Bash`, but shell files should still be kept with `LF` line endings.
 
 Run the full Hudi pipeline:
 
