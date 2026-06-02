@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker_compat.sh"
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo "[1/3] Run bronze orders job in Hudi mode on Spark 3.5.8 container"

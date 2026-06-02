@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker_compat.sh"
+
 if [[ $# -lt 1 ]]; then
   echo "Usage: bash scripts/spark_submit_container.sh <job.py> [job args...]"
   exit 1

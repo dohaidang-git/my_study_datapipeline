@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker_compat.sh"
+
 echo "==> Show tables in hive.analytics"
 docker exec trino trino --execute "SHOW TABLES FROM hive.analytics"
 

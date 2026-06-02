@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker_compat.sh"
+
 if [[ $# -eq 0 ]]; then
   echo "Usage: bash scripts/check_required_containers.sh <container> [container ...]"
   exit 1
